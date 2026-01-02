@@ -1,13 +1,10 @@
 package com.fuxion.inventario.service.impl;
 
-/*
 import com.fuxion.inventario.dto.PedidoRequest;
 import com.fuxion.inventario.dto.PedidoResponse;
 import com.fuxion.inventario.model.entity.*;
 import com.fuxion.inventario.model.enums.EstadoPedido;
-import com.fuxion.inventario.model.enums.TipoMovimiento;
 import com.fuxion.inventario.repository.*;
-import com.fuxion.inventario.service.InventarioService;
 import com.fuxion.inventario.service.PedidoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,19 +25,19 @@ public class PedidoServiceImpl implements PedidoService {
     private final UsuarioRepository usuarioRepository;
     private final AlmacenRepository almacenRepository;
     private final ProductoRepository productoRepository;
-    private final MovimientoStockRepository movimientoStockRepository;
-    private final InventarioService inventarioService;
+    // Necesitamos el repositorio directo para buscar stock y hacer préstamos
+    private final InventarioRepository inventarioRepository;
 
     @Override
     @Transactional
     public PedidoResponse registrarPedido(PedidoRequest request) {
-        // 1. Validar datos
+        // 1. Validar datos básicos
         Almacen almacen = almacenRepository.findById(request.getIdAlmacenOrigen())
                 .orElseThrow(() -> new RuntimeException("Almacén no existe"));
         Usuario vendedor = usuarioRepository.findById(request.getIdVendedor())
                 .orElseThrow(() -> new RuntimeException("Vendedor no existe"));
 
-        // 2. Crear pedido
+        // 2. Crear la Cabecera del Pedido
         Pedido pedido = Pedido.builder()
                 .codigoPedido("PED-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .fechaCreacion(LocalDateTime.now())
@@ -50,54 +46,75 @@ public class PedidoServiceImpl implements PedidoService {
                 .clienteNombre(request.getClienteNombre())
                 .clienteTelefono(request.getClienteTelefono())
                 .clienteDireccion(request.getClienteDireccion())
-                .ubicacionMaps(request.getUbicacionMaps())
+                .ubicacionMaps(request.getUbicacionMaps()) // Usado para Tipo Entrega (Delivery/Recojo)
                 .aplicativoDelivery(request.getAplicativoDelivery())
                 .nombreMotorizado(request.getNombreMotorizado())
                 .estado(EstadoPedido.PENDIENTE)
+                .montoProductos(BigDecimal.ZERO)
+                .comisionAlmacenero(BigDecimal.ZERO)
                 .build();
 
         pedido = pedidoRepository.save(pedido);
 
         BigDecimal montoTotal = BigDecimal.ZERO;
 
-        // 3. Procesar productos y DESCONTAR STOCK
+        // 3. Procesar Productos: CALCULAR STICKS Y DESCONTAR
         for (PedidoRequest.DetallePedidoRequest item : request.getDetalles()) {
             Producto producto = productoRepository.findById(item.getIdProducto())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
 
-            // Descontar stock
-            inventarioService.descontarStockEstricto(almacen, vendedor, producto, item.getCantidad());
+            // --- PASO CRÍTICO: CONVERSIÓN DE CAJAS A STICKS ---
+            // Si piden 1 Caja de Prunex, son 28 sticks.
+            int factorConversion = producto.getSticksPorCaja() != null ? producto.getSticksPorCaja() : 28;
+            int cantidadSticksReales = item.getCantidad() * factorConversion;
+            // --------------------------------------------------
 
-            // Registrar movimiento
-            MovimientoStock movimiento = MovimientoStock.builder()
-                    .fecha(LocalDateTime.now())
-                    .almacen(almacen)
-                    .producto(producto)
-                    .dueno(vendedor)
-                    .tipo(TipoMovimiento.SALIDA)
-                    .cantidad(item.getCantidad())
-                    .referenciaTipo("PEDIDO")
-                    .referenciaId(pedido.getIdPedido())
-                    .build();
-            movimientoStockRepository.save(movimiento);
+            // --- LÓGICA DE STOCK INTELIGENTE ---
 
-            // Guardar detalle
+            // A) Intentar descontar stock del Vendedor (Jeampier)
+            Inventario invVendedor = inventarioRepository.findByAlmacenAndDuenoAndProducto(
+                    almacen, vendedor, producto
+            ).orElse(null);
+
+            Usuario duenoStockReal = vendedor;
+
+            if (invVendedor != null && invVendedor.getCantidadSticks() >= cantidadSticksReales) {
+                // ¡TIENE STOCK! Descontamos los sticks
+                invVendedor.setCantidadSticks(invVendedor.getCantidadSticks() - cantidadSticksReales);
+                inventarioRepository.save(invVendedor);
+            } else {
+                // B) NO TIENE STOCK -> BUSCAR PRÉSTAMO (Betzaida u otros)
+                Inventario invPrestamo = inventarioRepository.findFirstByAlmacenAndProductoAndCantidadSticksGreaterThanEqual(
+                        almacen, producto, cantidadSticksReales
+                ).orElseThrow(() -> new RuntimeException("¡Stock Insuficiente! Nadie tiene " + cantidadSticksReales + " sticks de " + producto.getNombre()));
+
+                // Descontamos al prestamista
+                invPrestamo.setCantidadSticks(invPrestamo.getCantidadSticks() - cantidadSticksReales);
+                inventarioRepository.save(invPrestamo);
+
+                // Marcamos que el stock salió de otro socio
+                duenoStockReal = invPrestamo.getDueno();
+            }
+
+            // --- GUARDAR DETALLE ---
+            // Guardamos la cantidad en CAJAS (lo que pidió el cliente) para que el recibo se vea bien "1 Prunex"
             DetallePedido detalle = DetallePedido.builder()
                     .pedido(pedido)
                     .producto(producto)
-                    .duenoStock(vendedor)
-                    .cantidad(item.getCantidad())
+                    .duenoStock(duenoStockReal) // Registramos quién puso el producto (para deudas)
+                    .cantidad(item.getCantidad()) // Guardamos 1 (Caja)
                     .build();
             detallePedidoRepository.save(detalle);
 
-            // Calcular monto
+            // Calcular monto (Precio Caja * Cantidad Cajas)
             BigDecimal subtotal = producto.getPrecioReferencial()
                     .multiply(new BigDecimal(item.getCantidad()));
             montoTotal = montoTotal.add(subtotal);
         }
 
-        // 4. Calcular comisión (3% con mínimo 1 y máximo 5)
+        // 4. Calcular comisión (3%)
         BigDecimal comision = montoTotal.multiply(new BigDecimal("0.03"));
+        // Regla de negocio: Mínimo 1 sol, Máximo 5 soles (opcional, según tu lógica anterior)
         if (comision.compareTo(new BigDecimal("1.00")) < 0) comision = new BigDecimal("1.00");
         if (comision.compareTo(new BigDecimal("5.00")) > 0) comision = new BigDecimal("5.00");
 
@@ -126,7 +143,6 @@ public class PedidoServiceImpl implements PedidoService {
             pedidos = pedidoRepository.findByAlmacenOrigenAndEstado(
                     almacen, EstadoPedido.valueOf(estado));
         } else {
-            // Todos los pedidos del almacén
             pedidos = pedidoRepository.findByAlmacenOrigen(almacen);
         }
 
@@ -156,5 +172,3 @@ public class PedidoServiceImpl implements PedidoService {
                 .build();
     }
 }
-
- */

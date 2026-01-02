@@ -1,5 +1,7 @@
 package com.fuxion.inventario.exception.handler; // O exception.handler
 
+/*
+
 import com.fuxion.inventario.exception.StockInsuficienteException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,3 +36,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 }
+
+
+ */

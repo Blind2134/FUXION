@@ -1,5 +1,5 @@
 package com.fuxion.inventario.service.impl;
-
+/*
 import com.fuxion.inventario.model.entity.*;
 import com.fuxion.inventario.model.enums.EstadoPrestamo;
 import com.fuxion.inventario.repository.*;
@@ -81,3 +81,6 @@ public class PrestamoServiceImpl implements PrestamoService {
         // return prestamoRepository.findByAlmacenIdAlmacenAndEstado(idAlmacen, EstadoPrestamo.PENDIENTE);
         return prestamoRepository.findByAlmacenIdAlmacenAndEstado(idAlmacen, EstadoPrestamo.PENDIENTE);    }
 }
+
+
+ */
