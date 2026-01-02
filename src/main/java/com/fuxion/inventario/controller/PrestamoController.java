@@ -1,18 +1,7 @@
 package com.fuxion.inventario.controller;
 
-import com.fuxion.inventario.model.entity.Prestamo;
-import com.fuxion.inventario.service.PrestamoService;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/prestamos")
-@RequiredArgsConstructor
-
+// Clase comentada temporalmente por petición del usuario (no se utiliza por el momento)
+/*
 public class PrestamoController {
 
     private final PrestamoService prestamoService;
@@ -53,3 +42,4 @@ public class PrestamoController {
         private Integer cantidad;
     }
 }
+*/

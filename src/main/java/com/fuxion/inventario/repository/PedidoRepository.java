@@ -23,4 +23,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     // 3. BUSCAR POR CÓDIGO
     Optional<Pedido> findByCodigoPedido(String codigoPedido);
+
+    List<Pedido> findByAlmacenOrigen(Almacen almacen);
+    List<Pedido> findByAlmacenOrigenAndEstado(Almacen almacen, EstadoPedido estado);
 }

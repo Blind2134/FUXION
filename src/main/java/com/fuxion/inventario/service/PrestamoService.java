@@ -1,5 +1,5 @@
 package com.fuxion.inventario.service;
-
+/*
 import com.fuxion.inventario.model.entity.Prestamo;
 import java.util.List;
 
@@ -8,3 +8,5 @@ public interface PrestamoService {
     void aprobarPrestamo(Long idPrestamo);
     List<Prestamo> listarPendientes(Long idAlmacen);
 }
+
+ */

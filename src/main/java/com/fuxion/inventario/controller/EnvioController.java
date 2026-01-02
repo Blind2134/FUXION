@@ -1,19 +1,10 @@
 package com.fuxion.inventario.controller;
 
-import com.fuxion.inventario.dto.DetalleEnvioDTO;
-import com.fuxion.inventario.dto.EnvioRequest;
-import com.fuxion.inventario.dto.EnvioResponse;
-import com.fuxion.inventario.service.EnvioService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
+// Clase comentada temporalmente por petición del usuario (no se utiliza por el momento)
+/*
 @RestController
 @RequestMapping("/api/envios")
 @RequiredArgsConstructor
-
 public class EnvioController {
 
     private final EnvioService envioService;
@@ -53,3 +44,4 @@ public class EnvioController {
         return ResponseEntity.ok(envioService.listarDetalles(id));
     }
 }
+*/

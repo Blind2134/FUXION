@@ -1,4 +1,5 @@
 package com.fuxion.inventario.service;
+/*
 
 import com.fuxion.inventario.dto.DetalleEnvioDTO;
 import com.fuxion.inventario.dto.EnvioRequest;
@@ -18,3 +19,5 @@ public interface EnvioService {
     List<EnvioResponse> listarMisEnvios(Long idSocio);    // Para el Dashboard del Socio
     List<DetalleEnvioDTO> listarDetalles(Long idEnvio);
 }
+
+ */

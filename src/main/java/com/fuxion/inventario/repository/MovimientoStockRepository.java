@@ -23,4 +23,6 @@ public interface MovimientoStockRepository extends JpaRepository<MovimientoStock
 
     // Para auditoría: Ver todos los movimientos que hizo un dueño
     List<MovimientoStock> findByDueno(Usuario dueno);
+
+    List<MovimientoStock> findByAlmacenOrderByFechaDesc(Almacen almacen);
 }

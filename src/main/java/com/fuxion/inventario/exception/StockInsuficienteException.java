@@ -1,4 +1,5 @@
 package com.fuxion.inventario.exception;
+/*
 
 import lombok.Getter;
 
@@ -14,3 +15,5 @@ public class StockInsuficienteException extends RuntimeException {
         this.nombrePrestamista = nombrePrestamista;
     }
 }
+
+ */
