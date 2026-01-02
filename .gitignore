@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Tus reglas adicionales (si las tenías en tu commit local)
+.env
